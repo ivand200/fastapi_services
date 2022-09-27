@@ -29,3 +29,25 @@ us a JSON-formatted error message that says, {"detail":[{"loc":["query","id"],"m
 g":"field required","type":"value_error.missing"}]}. To fix this problem, all
 fixed paths should be declared first before the dynamic endpoint URLs with path parameters. Thus,
 the preceding login_info() service should be declared first before login_with_token().
+
+
+Python collection types cannot specify the type of objects to store unless we apply the generic
+type hints for Python collections. The following delete_users() and update_profile_
+names() APIs use generic type hints, List and Dict, in declaring query parameters that are
+container types with type checking and data validation:
+
+
+Setting default values to parameters will allow the execution of an API method
+with or without supplying the parameter values. Depending on the requirement, assigned default values
+are usually 0 for numeric types, False for bool types, empty string for string types, an empty list
+([]) for List types, and an empty dictionary ({}) for Dict types.
+
+With mixed
+parameter types, all required parameters should be declared first, followed by default parameters, and
+last in the parameter list should be the optional types. Disregarding this ordering rule will generate
+a compiler error.
+
+To access a request header, import first the Header function from the fastapi module. Then, declare
+the variable that has the same name as the header in the method service as str types and initialize
+the variable by calling the Header(None) function. The None argument enables the Header()
+function to declare the variable optionally, which is a best practice.
