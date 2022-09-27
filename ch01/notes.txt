@@ -1,0 +1,31 @@
+Nowadays, focusing on API methods before building a whole application is one
+of the most popular and effective microservices design strategies. This approach, called an API-first
+microservices development, focuses first on the client’s needs and then later identifies what API service
+methods we need to implement for these client requirements.
+
+A good practice is to start all
+URLs with the same top-level base path, such as /ch01, and then differ when reaching their respective
+subdirectories.
+@app.get("/ch01/index")
+@app.get("/ch01/login")
+@app.post("/ch01/login/signup")
+@app.put("/ch01/account/profile/update/{username}")
+@app.patch("/ch01/account/profile/update/names/{username}")
+@app.delete("/ch01/discussion/posts/remove/{username}")
+
+
+Clients can pass their request data to FastAPI endpoint URLs through path parameters, query parameters,
+or headers to pursue service transactions.
+
+
+Multiple path parameters are acceptable if the leftmost variables are more likely to be filled with values
+than the rightmost variables. In other words, the importance of the leftmost path variables will make
+the process more relevant and correct than those on the right. This standard is applied to ensure that
+the endpoint URL will not look like other URLs, which might cause some conflicts and confusion.
+
+
+Because of confusion, the built-in data validation of FastAPI will show
+us a JSON-formatted error message that says, {"detail":[{"loc":["query","id"],"ms
+g":"field required","type":"value_error.missing"}]}. To fix this problem, all
+fixed paths should be declared first before the dynamic endpoint URLs with path parameters. Thus,
+the preceding login_info() service should be declared first before login_with_token().
