@@ -1,4 +1,5 @@
 from enum import Enum
+from os import uname
 import profile
 from typing import Optional, List, Dict
 from uuid import UUID, uuid1
@@ -34,6 +35,13 @@ class ValidUser(BaseModel):
     passphrase: str
 
 
+class UserType(str, Enum):
+    admin = "admin"
+    teacher = "teacher"
+    alumni = "alumni"
+    student = "student"
+
+
 class UserProfile(BaseModel):
     firstname: str
     lastname: str
@@ -44,6 +52,19 @@ class UserProfile(BaseModel):
     user_type: UserType
 
 
+class PostType(str, Enum):
+    information = "information"
+    inquiry = "inquiry"
+    quote = "quote"
+    twit = "twit"
+
+
+class Post(BaseModel):
+    topic: Optional[str] = None
+    message: str
+    date_posted: datetime
+
+
 class ForumPost(BaseModel):
     id: UUID
     topic: Optional[str] = None
@@ -51,6 +72,7 @@ class ForumPost(BaseModel):
     post_type: PostType 
     date_posted: datetime 
     username: str
+
 
 class ForumDiscussion(BaseModel):
     id: UUID
@@ -63,6 +85,7 @@ def index():
     return {"message": "Welcome FastAPI Nerds"}
 
 
+# /ch01/login?username=ivan&password=123
 @app.get("/ch01/login")
 def login(username: str, password: str):
     if valid_users.get(username) == None:
@@ -140,7 +163,7 @@ def delete_user(username: str):
         return {"message": "deleted user"}
 
 
-@app.get("/ch01/login/{username}/{password}"):
+@app.get("/ch01/login/{username}/{password}")
 def login_with_token(username: str, password: str, id: UUID):
     if valid_users.get(username) == None:
         return {"message": "user does not exist"}
@@ -165,6 +188,7 @@ def login(username: str, password: str):
 
 
 # Query parameters
+# ?skip=0&limit=10
 @app.get("/ch01/login")
 def login(username: str, password: str):
     if valid_users.get(username) == None:
@@ -315,6 +339,10 @@ def update_profile(username: str, id: UUID, new_profile: UserProfile):
 
 
 # Headers
+# To access a request header, import first the Header function from the fastapi module. Then, declare
+# the variable that has the same name as the header in the method service as str types and initialize
+# the variable by calling the Header(None) function. The None argument enables the Header()
+# function to declare the variable optionally, which is a best practice.
 @app.get("/ch01/headers/verify")
 def verify_headers(
     host: Optional[str] = Header(None),
@@ -331,4 +359,102 @@ def verify_headers(
     return request_headers
 
 
-# page 21
+# Response data
+@app.post("/ch01/discussion/posts/add/{username}")
+def post_discussion(username: str, post: Post, post_type: PostType):
+    if valid_users.get(username) == None:
+        return {"message": "user does not exist"}
+    elif not (discussion_posts.get(id) == None):
+        return {"message": "post already exists"}
+    else:
+        forum_post = ForumPost(
+            id=uuid1(),
+            topic=post.topic,
+            message=post.message,
+            post_type=post_type,
+            date_posted=post.data_posted,
+            username=username,
+            )
+        user = valid_profiles[username]
+        forum = ForumDiscussion(
+            id=uuid1(),
+            main_post=forum_post,
+            author=user,
+            replies=list(),
+        )
+        discussion_posts[forum.id] = forum
+        return forum
+
+
+@app.post("/ch01/login/validate", response_model=ValidUser)
+def approve_user(user: User):
+    if not valid_users.get(user.username) == None:
+        return ValidUser(
+            id=None,
+            username=None,
+            password=None,
+            passphrase=None,
+        )
+    else:
+        valid_user = ValidUser(
+            id=uuid1(),
+            username=user.username,
+            password=user.password,
+            passphrase=hashpw(user.password.encode(), gensalt()),
+        )
+        valid_users[user.username] = valid_user
+        del pending_users[user.username]
+        return valid_user
+
+
+# Handling Form parameters (x-www-form-urlencoded media type)
+# Form-handling services will not work without python-multipart
+@app.post("/ch01/account/profile/add", response_model=UserProfile)
+def add_profile(
+    username: str,
+    firstname: str = Form(...),
+    lastname: str = Form(...),
+    mid_init: str = Form(...),
+    user_age: int = Form(...),
+    sal: float = Form(...),
+    bday: str = Form(...),
+    utype: UserType = Form(...)
+    ):
+    if valid_users.get(username) == None:
+        return UserProfile(
+            firstname=None,
+            lastname=None,
+            middle_initial=None,
+            age=None,
+        )
+    else:
+        profile = UserProfile(
+            firstname=firstname,
+            lastname=lastname,
+            middle_initial=mid_init,
+            age=user_age, 
+            birthday=datetime.strptime(bday, "%m/%d/Y"), 
+            salary=sal, 
+            user_type=utype
+        )
+        valid_profiles[username] = profile
+        return profile
+
+
+# Managing cookies
+# The Cookie() function should always have the None argument to set the
+# parameters optionally, ensuring that the API method executes without problems whenever the headers
+# are not present in the request transaction. The following access_cookie() service retrieves all
+# the remember-me authorization cookies created by the previous service:
+@app.post("/ch01/login/rememberme/create")
+def create_cookies(resp: Response, id: UUID, username: str = ""):
+    resp.set_cookie(key="userkey", value=username)
+    resp.set_cookie(key="identity", value=str(id))
+    return {"message": "remember-me tokens created"}
+
+
+@app.get("/ch01/login/cookies")
+def access_cookies(userkey: Optional[str] = Cookie(None), identity: Optional[str] = Cookie(None)):
+    cookies["userkey"] = userkey
+    cookies["identity"] = identity
+    return cookies

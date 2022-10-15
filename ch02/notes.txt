@@ -1,0 +1,50 @@
+Important note
+Avoid cycles when dealing with the from… import statement. A cycle happens when a
+module script, a.py, accesses components from b.py that import resource objects from
+a.py. FastAPI does not accept this scenario and will issue an error message.
+
+
+One way of managing the exception-handling mechanism of your application is to apply a try-except
+block to manage the return responses of your API when it encounters an exception or none. After
+applying try-block, the operation should trigger a single status code, most often Status Code
+200 (SC 200). The path operation of FastAPI and APIRouter has a status_code parameter
+that we can use to indicate the type of status code we want to raise.
+
+
+If we need each block in try-except to return their respective status code, we need to avoid
+using the status_code parameter of the path operations and use JSONResponse instead.
+
+
+Another way of managing possible errors is by letting the REST API throw the HTTPException
+object. HTTPException is a FastAPI class that has required constructor parameters: detail,
+which needs an error message in the str type, and status_code, which asks for a valid integer
+value. The detail part is converted to JSON-type and returned to the user as a response after the
+HTTPException instance is thrown by the operation.
+To throw HTTPException, a validation process using any variations of if statements is more
+appropriate than using the try-except block because the cause of the error needs to be identified
+before throwing the HTTPException object using the raise statement. Once raise is executed,
+the whole operation will halt and send the HTTP error message in JSON-type to the client with the
+specified status code.
+
+
+Having model objects with non-JSON-friendly components in FastAPI-related operations
+can cause serious exceptions. To avoid these Pydantic validation issues, it is always advisable to use
+jsonable_encoder() to manage the conversion of all the attributes of our model object into
+JSON-types.
+The json module with its dumps() and loads() utility methods can be used instead of
+jsonable_encoder() but a custom JSON encoder should be created to successfully map
+the UUID type, the formatted date type, and other complex attribute types to str.
+
+
+Transactions such as logging, SMTP-/FTP-related requirements, events, and some database-
+related triggers are the best candidates for background jobs.
+Important Note
+Clients will always get their response from the REST API method despite the execution time
+of the background task. Background tasks are for processes that will take enough time that
+including them in the API operation could cause performance degradation.
+
+
+To improve performance, you can add more threads within the uvicorn thread pool by including
+the --workers option when running the server. Indicate your preferred number of threads after
+calling the option:
+uvicorn main:app --workers 5 --reload
